@@ -3,6 +3,7 @@ from disnake.ext import commands
 from disnake.ext.commands import CommandSyncFlags
 import os
 
+from cogs.commands.create_ticket import TicketButtonView
 from data.config import TOKEN
 from utils.logger_util import logger
 
@@ -19,6 +20,7 @@ bot = commands.InteractionBot(intents=intents)
 @bot.event
 async def on_ready():
     logger(f"###################### {bot.user} ######################")
+    bot.add_view(TicketButtonView())
 
 def load_cogs():
     for root, _, files in os.walk("cogs"):
@@ -31,6 +33,8 @@ def load_cogs():
                         logger(f"{cog} has been loaded")
                     except Exception as e:
                         logger(f"Error loading cog {cog}: {e}")
+
+
 
 if __name__ == "__main__":
     load_cogs()
