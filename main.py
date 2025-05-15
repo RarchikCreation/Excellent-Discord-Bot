@@ -3,8 +3,11 @@ from disnake.ext import commands
 from disnake.ext.commands import CommandSyncFlags
 import os
 
-from cogs.commands.create_ticket import TicketButtonView
+from buttons.tickets.ReplyButtonView import ReplyButtonView
+from buttons.tickets.TicketButtonView import TicketButtonView
+from cogs.commands.create_ticket import TICKET_CHANNEL_ID
 from data.config import TOKEN
+from utils.db_util import load_all_tickets, init_db, load_all_created_tickets, migrate_db
 from utils.logger_util import logger
 
 intents = disnake.Intents(
@@ -22,6 +25,33 @@ async def on_ready():
     logger(f"###################### {bot.user} ######################")
     bot.add_view(TicketButtonView())
 
+    for message_id, user_id, issue_text in load_all_tickets():
+        channel = bot.get_channel(TICKET_CHANNEL_ID)
+        if channel:
+            try:
+                message = await channel.fetch_message(message_id)
+                user = await bot.fetch_user(user_id)
+                view = ReplyButtonView(user, issue_text, message)
+                await message.edit(view=view)
+            except Exception as e:
+                logger(f"Failed to restore button: {e}")
+    for user_id, channel_id in load_all_created_tickets():
+        channel = bot.get_channel(channel_id)
+        if not isinstance(channel, disnake.TextChannel):
+            continue
+        if channel:
+            try:
+                user = await bot.fetch_user(user_id)
+                messages = [msg async for msg in channel.history(limit=10)]
+                last_bot_message = next((m for m in messages if m.author.id == bot.user.id and m.components), None)
+
+                if last_bot_message:
+                    from buttons.tickets.CloseTicketView import CloseTicketView
+                    view = CloseTicketView(channel, user, user)
+                    await last_bot_message.edit(view=view)
+            except Exception as e:
+                logger(f"Failed to re-register close button in ticket channel {channel_id}: {e}")
+
 def load_cogs():
     for root, _, files in os.walk("cogs"):
         for file in files:
@@ -35,7 +65,8 @@ def load_cogs():
                         logger(f"Error loading cog {cog}: {e}")
 
 
-
 if __name__ == "__main__":
+    init_db()
+    migrate_db()
     load_cogs()
     bot.run(TOKEN)

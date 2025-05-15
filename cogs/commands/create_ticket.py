@@ -1,13 +1,14 @@
 import disnake
 from disnake.ext import commands
-from disnake.ui import View, Button, Modal, TextInput
+from disnake.ui import Modal, TextInput
 from disnake import ApplicationCommandInteraction, TextInputStyle
 
+from buttons.tickets.ReplyButtonView import ReplyButtonView
+from buttons.tickets.TicketButtonView import TicketButtonView
+from permanent.constans import TICKET_CHANNEL_ID, ANSWER_CHANNEL_ID
 from utils.logger_util import logger
 from utils.role_check_util import check_trust_access
-
-TICKET_CHANNEL_ID = 1371931353313968128
-ANSWER_CHANNEL_ID = 1371936365075234876
+from utils.db_util import save_ticket, delete_ticket, can_create_ticket, update_ticket_time
 
 class TicketModal(Modal):
     def __init__(self, user: disnake.User):
@@ -24,10 +25,14 @@ class TicketModal(Modal):
         super().__init__(title="Обращение в поддержку", components=components)
 
     async def callback(self, inter: disnake.ModalInteraction):
+        if not can_create_ticket(inter.user.id):
+            await inter.response.send_message("Вы можете создавать обращение только раз в сутки.", ephemeral=True)
+            return
+
         description = inter.text_values["description"]
 
         embed = disnake.Embed(
-            description=f"## Обращение от {inter.user.mention}\n" + description,
+            description=f"## Обращение от {inter.user.mention}\n{description}",
             color=disnake.Color.dark_purple()
         )
         embed.set_thumbnail(url=inter.user.avatar.url if inter.user.avatar else None)
@@ -38,17 +43,10 @@ class TicketModal(Modal):
             view = ReplyButtonView(inter.user, description, None)
             message = await ticket_channel.send(embed=embed, view=view)
             view.message_to_delete = message
+            save_ticket(message.id, inter.user.id, description, message.channel.id)
+            update_ticket_time(inter.user.id)
 
         await inter.response.send_message("Ваше обращение принято на рассмотрение!", ephemeral=True)
-
-
-class TicketButtonView(View):
-    def __init__(self):
-        super().__init__(timeout=None)
-
-    @disnake.ui.button(label="Создать обращение", style=disnake.ButtonStyle.primary, custom_id="open_ticket_form")
-    async def ticket_button_callback(self, button: disnake.ui.Button, inter: disnake.MessageInteraction):
-        await inter.response.send_modal(TicketModal(inter.user))
 
 class CreateTicketCog(commands.Cog):
     def __init__(self, bot):
@@ -95,7 +93,6 @@ class ReplyModal(Modal):
         self.issue_text = issue_text
         self.message_to_delete = message_to_delete
 
-
         components = [
             TextInput(
                 label="Ответ на обращение",
@@ -112,24 +109,26 @@ class ReplyModal(Modal):
 
         embed = disnake.Embed(
             description=(
-                f"## Ответ на ваше обращение \n **Ваша проблема:**\n{self.issue_text}\n\n"
-                f"**Ответ:**\n{reply_text}"
+                f"## Ответ на ваше обращение\n**Содержание:**\n{self.issue_text}\n\n"
+                f"**Решение:**\n{reply_text}"
             ),
-
             color=disnake.Color.dark_purple()
         )
         embed.set_thumbnail(url=inter.user.avatar.url if inter.user.avatar else None)
+
         answer = disnake.Embed(
-            title="Ответ на обращение",
             description=(
+                "## Ответ на обращение\n"
                 f"**Пользователь:** {self.user.mention}\n"
                 f"**Модератор:** {inter.user.mention}\n\n"
-                f"**Проблема:**\n{self.issue_text}\n\n"
-                f"**Ответ:**\n{reply_text}"
+                f"**Содержание:**\n{self.issue_text}\n\n"
+                f"**Решение:**\n{reply_text}"
             ),
             color=disnake.Color.dark_purple()
         )
+        answer.set_thumbnail(url=inter.user.avatar.url if inter.user.avatar else None)
         answer_channel = inter.guild.get_channel(ANSWER_CHANNEL_ID)
+
         try:
             await self.user.send(embed=embed)
             await inter.response.send_message("Ответ успешно отправлен пользователю!", ephemeral=True)
@@ -140,21 +139,9 @@ class ReplyModal(Modal):
             if self.message_to_delete:
                 try:
                     await self.message_to_delete.delete()
+                    delete_ticket(self.message_to_delete.id)
                 except Exception as e:
-                    logger(f"Failed to delete request message:{e}")
-
-
-class ReplyButtonView(View):
-    def __init__(self, user: disnake.User, issue_text: str, message_to_delete: disnake.Message):
-        super().__init__(timeout=None)
-        self.user = user
-        self.issue_text = issue_text
-        self.message_to_delete = message_to_delete
-
-    @disnake.ui.button(label="Ответить", style=disnake.ButtonStyle.primary, custom_id="reply_to_ticket")
-    async def reply_button_callback(self, button: disnake.ui.Button, inter: disnake.MessageInteraction):
-        await inter.response.send_modal(ReplyModal(self.user, self.issue_text, self.message_to_delete))
-
+                    logger(f"Failed to delete request message: {e}")
 
 def setup(bot):
     bot.add_cog(CreateTicketCog(bot))
