@@ -3,7 +3,7 @@ from disnake.ext import commands
 from disnake.ui import View, Button, Modal, TextInput
 from disnake import ApplicationCommandInteraction, ModalInteraction
 
-from utils.role_check_util import check_trust_access
+from utils.users.role_check_util import check_trust_access
 
 class ApplicationButtonView(View):
     def __init__(self):

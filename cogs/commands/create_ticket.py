@@ -6,9 +6,9 @@ from disnake import ApplicationCommandInteraction, TextInputStyle
 from buttons.tickets.ReplyButtonView import ReplyButtonView
 from buttons.tickets.TicketButtonView import TicketButtonView
 from permanent.constans import TICKET_CHANNEL_ID, ANSWER_CHANNEL_ID
-from utils.logger_util import logger
-from utils.role_check_util import check_trust_access
-from utils.db_util import save_ticket, delete_ticket, can_create_ticket, update_ticket_time
+from utils.console.logger_util import logger
+from utils.users.role_check_util import check_trust_access
+from utils.database.db_util import save_ticket, delete_ticket, can_create_ticket, update_ticket_time
 
 class TicketModal(Modal):
     def __init__(self, user: disnake.User):
