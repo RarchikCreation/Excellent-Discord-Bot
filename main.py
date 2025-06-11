@@ -1,14 +1,16 @@
+
 import disnake
 from disnake.ext import commands
 from disnake.ext.commands import CommandSyncFlags
 import os
-
+from utils.rpc.rpc_util import DiscordRPC
 from buttons.tickets.ReplyButtonView import ReplyButtonView
 from buttons.tickets.TicketButtonView import TicketButtonView
 from cogs.commands.create_ticket import TICKET_CHANNEL_ID
-from data.config import TOKEN
-from utils.db_util import load_all_tickets, init_db, load_all_created_tickets, migrate_db
-from utils.logger_util import logger
+from data.config import TOKEN, CLIENT_ID
+from utils.database.db_util import load_all_tickets, init_db, load_all_created_tickets, migrate_db
+from utils.console.logger_util import logger
+from utils.rpc import rpc_util
 
 intents = disnake.Intents(
     guilds=True,
@@ -20,11 +22,13 @@ intents = disnake.Intents(
 sync_flags = CommandSyncFlags.default()
 bot = commands.InteractionBot(intents=intents)
 
+rpc = DiscordRPC(client_id=CLIENT_ID)
+
 @bot.event
 async def on_ready():
     logger(f"###################### {bot.user} ######################")
     bot.add_view(TicketButtonView())
-
+    rpc.start()
     for message_id, user_id, issue_text in load_all_tickets():
         channel = bot.get_channel(TICKET_CHANNEL_ID)
         if channel:

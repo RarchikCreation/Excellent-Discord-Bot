@@ -1,10 +1,9 @@
 import disnake
-from disnake import PermissionOverwrite
 from disnake.ui import View
 
 from permanent.constans import TICKET_CATEGORY_ID, SUPPORT_ROLE_ID
-from utils.db_util import delete_ticket
-from utils.logger_util import logger
+from utils.database.db_util import delete_ticket
+from utils.console.logger_util import logger
 
 class ReplyButtonView(View):
     def __init__(self, user: disnake.User, issue_text: str, message_to_delete: disnake.Message):
@@ -48,7 +47,7 @@ class ReplyButtonView(View):
         await channel.send(embed=embed, view=view)
         await inter.response.send_message(f"Канал {channel.mention} успешно создан!", ephemeral=True)
 
-        from utils.db_util import log_created_ticket
+        from utils.database.db_util import log_created_ticket
         log_created_ticket(self.user.id, channel.id, self.issue_text, inter.user.id)
 
 
