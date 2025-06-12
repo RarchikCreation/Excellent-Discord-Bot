@@ -28,8 +28,9 @@ rpc = DiscordRPC(client_id=CLIENT_ID)
 async def on_ready():
     logger(f"###################### {bot.user} ######################")
     bot.add_view(TicketButtonView())
-    rpc.start()
-    for message_id, user_id, issue_text in load_all_tickets():
+    await rpc.start()
+    for message_id, user_id, issue_text, *_ in load_all_tickets():
+
         channel = bot.get_channel(TICKET_CHANNEL_ID)
         if channel:
             try:

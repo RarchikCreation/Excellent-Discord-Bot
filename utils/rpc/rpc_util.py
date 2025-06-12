@@ -28,6 +28,8 @@ class DiscordRPC:
         except Exception as e:
             logger(f"[RPC] Failed to update presence: {e}")
 
-    def start(self):
-        self.connect()
-        self.update()
+    async def start(self):
+        try:
+            await self.rpc.handshake()
+        except Exception as e:
+            print(f"[RPC] Failed to connect: {e}")
