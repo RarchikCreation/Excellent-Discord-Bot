@@ -28,7 +28,11 @@ rpc = DiscordRPC(client_id=CLIENT_ID)
 async def on_ready():
     logger(f"###################### {bot.user} ######################")
     bot.add_view(TicketButtonView())
-    await rpc.start()
+
+
+    activity = disnake.Game("Excellent Omni — Разработчик » rare.creation")
+    await bot.change_presence(status=disnake.Status.online, activity=activity)
+
     for message_id, user_id, issue_text, *_ in load_all_tickets():
 
         channel = bot.get_channel(TICKET_CHANNEL_ID)
