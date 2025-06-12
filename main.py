@@ -28,7 +28,7 @@ async def on_ready():
     bot.add_view(TicketButtonView())
 
 
-    activity = disnake.Game("Excellent Omni — Разработчик » rare.creation")
+    activity = disnake.Game("Excellent Omni")
     await bot.change_presence(status=disnake.Status.online, activity=activity)
 
     for message_id, user_id, issue_text, *_ in load_all_tickets():
